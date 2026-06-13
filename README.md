@@ -1,6 +1,6 @@
 # Mirage Mock : Test Architecture
 
-**Mirage Mock** is a layer-7 test architecture that shadows (copy) live production traffic, surgically sanitizes sensitive data via high-speed byte-boundary shifting, and replays real-world concurrent loads against polyglot staging microservices.
+**Mirage Mock** is a layer-7 test architecture that shadows (copies) live production traffic, surgically sanitizes sensitive data via high-speed byte-boundary shifting, and replays real-world concurrent loads against test environments.
 
 # Architecture
 
