@@ -1,6 +1,6 @@
 # Mirage Mock : Test Architecture
 
-**Mirage Mock** is a layer-7 test architecture that copy live production traffic directly at the network level. Operating as a transparent proxy or sidecar, it intercepts raw HTTP byte streams copy its al background seperately from actual endpoint handlers. Using high-speed byte-boundary shifting, it surgically sanitizes sensitive values from payloads without altering structural keys, then copies the traffic asynchronously to staging (test or target env) servers.
+**Mirage Mock** is a layer-7 test architecture that shadows (copy) live production traffic, surgically sanitizes sensitive data via high-speed byte-boundary shifting, and replays real-world concurrent loads against polyglot staging microservices.
 
 # Architecture
 
