@@ -38,7 +38,7 @@ func main() {
 		defer r.Body.Close()
 
 		// Echo back the submitted body along with a correlation flag
-		w.Header().Set("X-MirageMock-Validated", "true")
+		w.Header().Set("Authorization", "true")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		w.Write(body)
@@ -55,7 +55,7 @@ func main() {
 		QueueCap:             100,
 		TargetClient:         "http://localhost:8081",
 		ReWriter:             nil,
-		KeysValueToReWritten: []string{"Authorization", "X-Forward-Value"},
+		KeysValueToReWritten: []string{"Authorization", "X-Forward-Value", "UserId"},
 	}
 	mirageMockerProxy := miragemock.NewProxy(mirageMockerConfig)
 	wrapMirageMockerToRouter := mirageMockerProxy.AsMiddleware(router)
