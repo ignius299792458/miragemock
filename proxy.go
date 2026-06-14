@@ -67,13 +67,22 @@ func NewProxy(cfg Config) *Proxy {
 	return p
 }
 
-// Handler acts as standard HTTP middleware, intercepting and cloning
+// AsMiddleware acts as standard HTTP middleware, intercepting and cloning
 // traffic transparently without interrupting the core handler chain.
-func (p *Proxy) Handler(next http.Handler) http.Handler {
+// USE IN: middleware
+func (p *Proxy) AsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p.dispatchAsync(r)
 		next.ServeHTTP(w, r)
 	})
+}
+
+// DispatchAsync as func that intercepting and cloning
+// traffic transparently without interrupting the core handler business
+// logic.
+// USE IN: specific endpoint handler with specific configuration
+func (p *Proxy) DispatchAsync(r *http.Request) {
+	p.dispatchAsync(r)
 }
 
 func (p *Proxy) dispatchAsync(r *http.Request) {
