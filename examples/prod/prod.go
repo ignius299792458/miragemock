@@ -30,6 +30,10 @@ func main() {
 
 	// 3. Post data endpoint to test request body and custom header handling
 	router.HandleFunc("POST /v1/submit", func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Authorization", "true")
+		w.Header().Set("X-MirageMock-Test-Key", "ignius299792458-miragemock-key1")
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Failed to read body", http.StatusBadRequest)
@@ -38,7 +42,6 @@ func main() {
 		defer r.Body.Close()
 
 		// Echo back the submitted body along with a correlation flag
-		w.Header().Set("Authorization", "true")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		w.Write(body)
@@ -50,12 +53,17 @@ func main() {
 		w.Write([]byte(`{"items": ["item1", "item2", "item3"], "count": 3}`))
 	})
 
+	// only make sure this run in production env
+	// (or whose request you want to copy and pass to testing)
 	mirageMockerConfig := miragemock.Config{
-		MaxWorkers:           20,
-		QueueCap:             100,
-		TargetClient:         "http://localhost:8081",
-		ReWriter:             nil,
-		KeysValueToReWritten: []string{"Authorization", "X-Forward-Value", "UserId"},
+		MaxWorkers:   20,
+		QueueCap:     100,
+		TargetClient: "http://localhost:8081",
+		ReWriter:     nil,
+		KeysValueToReWritten: map[miragemock.SanitizingKeyNameType][]string{
+			miragemock.SanitizingHeaderKeys: {"Authorization", "X-MirageMock-Test-Key"},
+			miragemock.SanitizingBodyKeys:   {"UserId"},
+		},
 	}
 	mirageMockerProxy := miragemock.NewProxy(mirageMockerConfig)
 	wrapMirageMockerToRouter := mirageMockerProxy.AsMiddleware(router)

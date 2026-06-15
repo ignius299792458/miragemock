@@ -28,15 +28,19 @@ func main() {
 
 	// 3. Post data endpoint to test request body and custom header handling
 	router.HandleFunc("POST /v1/submit", func(w http.ResponseWriter, r *http.Request) {
+		sanitizedHeaderAuth := w.Header().Get("Authorization")
+		sanitizedHeaderMMTK := w.Header().Get("X-MirageMock-Test-Key")
+		log.Printf("Sanizing Header: Auth: %s, MMTK: %s", sanitizedHeaderAuth, sanitizedHeaderMMTK)
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Failed to read body", http.StatusBadRequest)
 			return
 		}
+		log.Println(string(body))
 		defer r.Body.Close()
 
 		// Echo back the submitted body along with a correlation flag
-		w.Header().Set("X-MirageMock-Validated", "true")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		w.Write(body)
