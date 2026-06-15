@@ -4,5 +4,8 @@
 
 # Architecture
 
-1. First Time Scratched Architecture
-   ![First Time Scratched Architecture](./docs/first_scratched_arch.png "First Time Scratched Architecture")
+2. Second Phase Architecture
+   ![Second Phase Architecture](./docs/2nd_phase_arch.png "Second Phase Architecture")
+
+1. First Phase Architecture
+   ![First Phase Architecture](./docs/1st_phase_arch.png "First Phase Architecture")
