@@ -2,6 +2,7 @@ package miragemock
 
 import (
 	"bytes"
+	"log"
 	"net/http"
 )
 
@@ -45,63 +46,62 @@ func NewDefaultReWriter(keysNameList map[SanitizingKeyNameType][]string) *Defaul
 // RewriteBody searches for structural JSON keys and replaces their subsequent
 // dynamic values with the "<mv>" constant mask.
 func (drw *DefaultReWriter) RewriteBody(body []byte) []byte {
-	if len(body) == 0 || len(drw.keysNameByteList) == 0 {
+	log.Printf("Before RewriteBody %s: ", string(body))
+	if len(body) == 0 || len(drw.keysNameByteList[SanitizingBodyKeys]) == 0 {
 		return body
 	}
 
 	replacementToken := []byte("<mv>")
 
-	// Iterate through each structural key configured by the programmer
-	for _, key := range drw.keysNameByteList[SanitizingBodyKeys] {
-		// Formulate a structured JSON key search window token: e.g., "user_id":
-		searchToken := make([]byte, 0, len(key)+4)
-		searchToken = append(searchToken, '"')
-		searchToken = append(searchToken, key...)
-		searchToken = append(searchToken, '"', ':')
+	// Create a buffer builder to avoid complex in-place pointer math
+	// which is highly susceptible to the out-of-bounds issues
+	var output []byte
 
+	for _, key := range drw.keysNameByteList[SanitizingBodyKeys] {
+		searchToken := append([]byte{'"'}, append(key, '"', ':')...)
+
+		lastPos := 0
 		for {
-			// Find the location of the key structure inside the raw byte slice
-			keyIdx := bytes.Index(body, searchToken)
+			// Find occurrence
+			keyIdx := bytes.Index(body[lastPos:], searchToken)
 			if keyIdx == -1 {
-				break // Key not present in this body slice; move to next configured key
+				break
 			}
 
-			// Compute the starting offset position of the actual dynamic value string
-			valStartIdx := keyIdx + len(searchToken)
+			// Absolute index in the body
+			absKeyIdx := lastPos + keyIdx
+			valStartIdx := absKeyIdx + len(searchToken)
 
-			// Fast-forward past any empty whitespace paddings to locate the opening quote
+			// Skip whitespace/quotes
 			for valStartIdx < len(body) && (body[valStartIdx] == ' ' || body[valStartIdx] == '\t' || body[valStartIdx] == '"') {
 				valStartIdx++
 			}
 
-			// Locate the closing quote bounding the dynamic string value
+			// Find end of value
 			valEndIdx := valStartIdx
 			for valEndIdx < len(body) && body[valEndIdx] != '"' && body[valEndIdx] != ',' && body[valEndIdx] != '}' && body[valEndIdx] != '\r' && body[valEndIdx] != '\n' {
 				valEndIdx++
 			}
 
-			// Isolate target value metrics to perform length-shifting structural operations
-			targetValLen := valEndIdx - valStartIdx
-			delta := len(replacementToken) - targetValLen
-			newLen := len(body) + delta
-
-			// Memory Shift Path A: Structural replacement fits within buffer boundaries
-			if newLen <= cap(body) {
-				body = body[:newLen]
-				copy(body[valStartIdx+len(replacementToken):], body[valEndIdx:])
-				copy(body[valStartIdx:valStartIdx+len(replacementToken)], replacementToken)
+			// SAFETY GUARD: If we didn't find a valid end or indices are inverted, break
+			if valEndIdx < valStartIdx {
+				lastPos = absKeyIdx + len(searchToken)
 				continue
 			}
 
-			// Memory Shift Path B: Allocate fallback buffer if length exceeds memory frame capacity
-			out := make([]byte, newLen)
-			copy(out[:valStartIdx], body[:valStartIdx])
-			copy(out[valStartIdx:valStartIdx+len(replacementToken)], replacementToken)
-			copy(out[valStartIdx+len(replacementToken):], body[valEndIdx:])
-			body = out
-		}
-	}
+			// Append everything up to the value, then the token
+			output = append(output, body[lastPos:valStartIdx]...)
+			output = append(output, replacementToken...)
 
+			// Move the pointer past the original value
+			lastPos = valEndIdx
+		}
+		// Append remainder
+		output = append(output, body[lastPos:]...)
+		body = output
+		output = nil // Reset for next key iteration
+	}
+	log.Printf("After RewriteBody %s: ", string(body))
 	return body
 }
 
