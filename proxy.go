@@ -32,7 +32,7 @@ type Config struct {
 	QueueCap             int
 	TargetClient         string
 	ReWriter             ReWriter
-	KeysValueToReWritten []string
+	KeysValueToReWritten map[SanitizingKeyNameType][]string
 }
 
 // NewProxy instantiates a new Proxy with sanitized and defaulted configuration parameters.
@@ -47,7 +47,7 @@ func NewProxy(cfg Config) *Proxy {
 
 	// Keep KeysValueToReWritten as nil if unused, or slice it safely
 	if cfg.KeysValueToReWritten == nil {
-		cfg.KeysValueToReWritten = []string{}
+		cfg.KeysValueToReWritten = make(map[SanitizingKeyNameType][]string, 0)
 	}
 
 	// Use the provided keys for the default rewriter if available
