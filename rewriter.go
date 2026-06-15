@@ -12,20 +12,29 @@ type ReWriter interface {
 	RewriteHeader(header http.Header) http.Header
 }
 
+type SanitizingKeyNameType string
+
+const (
+	SanitizingHeaderKeys SanitizingKeyNameType = "header"
+	SanitizingBodyKeys   SanitizingKeyNameType = "body"
+)
+
 type DefaultReWriter struct {
-	keysNameByteList [][]byte // list of keys whose values need to be replaced
+	keysNameByteList map[SanitizingKeyNameType][][]byte // eg: "header" -> list of keys whose values need to be replaced
 }
 
-func NewDefaultReWriter(keysNameList []string) *DefaultReWriter {
+func NewDefaultReWriter(keysNameList map[SanitizingKeyNameType][]string) *DefaultReWriter {
 	if len(keysNameList) == 0 {
 		return &DefaultReWriter{
-			keysNameByteList: [][]byte{},
+			keysNameByteList: make(map[SanitizingKeyNameType][][]byte, len(keysNameList)),
 		}
 	}
 
-	var keysNameStrToByteList [][]byte
-	for _, value := range keysNameList {
-		keysNameStrToByteList = append(keysNameStrToByteList, []byte(value))
+	keysNameStrToByteList := make(map[SanitizingKeyNameType][][]byte, len(keysNameList))
+	for key, keyList := range keysNameList {
+		for _, element := range keyList {
+			keysNameStrToByteList[key] = append(keysNameStrToByteList[key], []byte(element))
+		}
 	}
 
 	return &DefaultReWriter{
@@ -43,7 +52,7 @@ func (drw *DefaultReWriter) RewriteBody(body []byte) []byte {
 	replacementToken := []byte("<mv>")
 
 	// Iterate through each structural key configured by the programmer
-	for _, key := range drw.keysNameByteList {
+	for _, key := range drw.keysNameByteList[SanitizingBodyKeys] {
 		// Formulate a structured JSON key search window token: e.g., "user_id":
 		searchToken := make([]byte, 0, len(key)+4)
 		searchToken = append(searchToken, '"')
@@ -99,14 +108,14 @@ func (drw *DefaultReWriter) RewriteBody(body []byte) []byte {
 // RewriteHeader iterates through the provided http.Header map and updates
 // values matching the specified keys to the replacement token.
 func (drw *DefaultReWriter) RewriteHeader(header http.Header) http.Header {
-	if len(header) == 0 || len(drw.keysNameByteList) == 0 {
+	if len(header) == 0 || len(drw.keysNameByteList[SanitizingHeaderKeys]) == 0 {
 		return header
 	}
 
 	replacementToken := "<mv>"
 
 	// Iterate over the keys we want to rewrite
-	for _, keyByte := range drw.keysNameByteList {
+	for _, keyByte := range drw.keysNameByteList[SanitizingHeaderKeys] {
 		// Convert byte key to string (standard library handles canonical capitalization automatically,
 		// but using http.CanonicalHeaderKey can enforce it if needed)
 		keyStr := string(keyByte)
